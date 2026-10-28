@@ -96,7 +96,7 @@ def plot_capacity(rows):
     ax.set_yscale("log")
     ax.set(title=f"Latency vs load — {rows[0]['clients']} clients, single-threaded server",
            xlabel="deliveries per second (thousands)", ylabel="latency (ms, log scale)")
-    ax.legend()
+    ax.legend(loc="upper left")
     ax.grid(alpha=0.3, which="both")
     fig.tight_layout()
     fig.savefig(RESULTS / "capacity.png", dpi=130)

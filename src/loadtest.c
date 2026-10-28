@@ -522,7 +522,7 @@ int main(int argc, char **argv)
      * than perfectly evenly spaced. Fixed seed: runs are repeatable. */
     uint64_t rng = 0x9e3779b97f4a7c15ull;
     measuring = 1;
-    uint64_t t0 = now_ns(), dur = (uint64_t)(opt.duration * 1e9), last_ping = t0;
+    uint64_t t0 = now_ns(), dur = (uint64_t)(opt.duration * 1e9), pings = 0;
     for (;;) {
         uint64_t now = now_ns(), el = now - t0;
         if (el >= dur)
@@ -534,10 +534,14 @@ int main(int argc, char **argv)
             rng ^= rng << 17;
             send_chat(&cl[rng % opt.clients]);
         }
-        if (opt.udp && now - last_ping > 1000000000ull) {
-            for (int i = 0; i < opt.clients; i++)
-                send_ping(&cl[i]);      /* keeps server-side presence alive */
-            last_ping = now;
+        /* UDP heartbeats keep server-side presence alive: one PING per
+         * client per second, spread evenly over the second. Sending them
+         * all at once would overflow the server's socket receive buffer
+         * and drop chat messages that arrive during the burst. */
+        if (opt.udp) {
+            uint64_t due = (uint64_t)((double)opt.clients * el / 1e9);
+            for (; pings < due; pings++)
+                send_ping(&cl[pings % opt.clients]);
         }
         poll_events(1);
     }
